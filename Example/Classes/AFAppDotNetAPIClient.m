@@ -1,6 +1,6 @@
-// AFNetworking.h
+// AFAppDotNetAPIClient.h
 //
-// Copyright (c) 2011 Gowalla (http://gowalla.com/)
+// Copyright (c) 2012 Mattt Thompson (http://mattt.me/)
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +20,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import <Foundation/Foundation.h>
-#import <Availability.h>
+#import "AFAppDotNetAPIClient.h"
 
-#ifndef _AFNETWORKING_
-    #define _AFNETWORKING_
+#import "AFJSONRequestOperation.h"
 
-    #import "AFURLConnectionOperation.h"
+static NSString * const kAFAppDotNetAPIBaseURLString = @"https://alpha-api.app.net/";
 
-    #import "AFHTTPRequestOperation.h"
-    #import "AFJSONRequestOperation.h"
-    #import "AFXMLRequestOperation.h"
-    #import "AFPropertyListRequestOperation.h"
-    #import "AFHTTPClient.h"
+@implementation AFAppDotNetAPIClient
 
-    #import "AFImageRequestOperation.h"
++ (AFAppDotNetAPIClient *)sharedClient {
+    static AFAppDotNetAPIClient *_sharedClient = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _sharedClient = [[AFAppDotNetAPIClient alloc] initWithBaseURL:[NSURL URLWithString:kAFAppDotNetAPIBaseURLString]];
+    });
+    
+    return _sharedClient;
+}
 
-    #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
-        #import "AFNetworkActivityIndicatorManager.h"
-        #import "UIImageView+AFNetworking.h"
-    #endif
-#endif /* _AFNETWORKING_ */
+- (id)initWithBaseURL:(NSURL *)url {
+    self = [super initWithBaseURL:url];
+    if (!self) {
+        return nil;
+    }
+    
+    [self registerHTTPOperationClass:[AFJSONRequestOperation class]];
+    
+    // Accept HTTP Header; see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1
+	[self setDefaultHeader:@"Accept" value:@"application/json"];
+    
+    return self;
+}
+
+@end

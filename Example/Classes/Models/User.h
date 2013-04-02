@@ -1,6 +1,6 @@
-// AFNetworking.h
+// User.h
 //
-// Copyright (c) 2011 Gowalla (http://gowalla.com/)
+// Copyright (c) 2012 Mattt Thompson (http://mattt.me/)
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,23 +21,19 @@
 // THE SOFTWARE.
 
 #import <Foundation/Foundation.h>
-#import <Availability.h>
 
-#ifndef _AFNETWORKING_
-    #define _AFNETWORKING_
+extern NSString * const kUserProfileImageDidLoadNotification;
 
-    #import "AFURLConnectionOperation.h"
+@interface User : NSObject
 
-    #import "AFHTTPRequestOperation.h"
-    #import "AFJSONRequestOperation.h"
-    #import "AFXMLRequestOperation.h"
-    #import "AFPropertyListRequestOperation.h"
-    #import "AFHTTPClient.h"
+@property (readonly, nonatomic) NSUInteger userID;
+@property (readonly, nonatomic) NSString *username;
+@property (readonly, nonatomic, unsafe_unretained) NSURL *avatarImageURL;
 
-    #import "AFImageRequestOperation.h"
+- (id)initWithAttributes:(NSDictionary *)attributes;
 
-    #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
-        #import "AFNetworkActivityIndicatorManager.h"
-        #import "UIImageView+AFNetworking.h"
-    #endif
-#endif /* _AFNETWORKING_ */
+#ifdef __MAC_OS_X_VERSION_MIN_REQUIRED
+@property (nonatomic, strong) NSImage *profileImage;
+#endif
+
+@end

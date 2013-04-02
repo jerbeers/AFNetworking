@@ -1,6 +1,5 @@
-// AFNetworking.h
-//
-// Copyright (c) 2011 Gowalla (http://gowalla.com/)
+// main.m
+// Copyright (c) 2012 Mattt Thompson (http://mattt.me/)
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +19,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import <Foundation/Foundation.h>
-#import <Availability.h>
+#if __IPHONE_OS_VERSION_MIN_REQUIRED
+  #import <UIKit/UIKit.h>
 
-#ifndef _AFNETWORKING_
-    #define _AFNETWORKING_
+  int main(int argc, char *argv[]) {
+      @autoreleasepool {
+          int retVal = UIApplicationMain(argc, argv, @"UIApplication", @"AppDelegate");
+          return retVal;
+      }
+  }
+#else
+  #import <Cocoa/Cocoa.h>
 
-    #import "AFURLConnectionOperation.h"
-
-    #import "AFHTTPRequestOperation.h"
-    #import "AFJSONRequestOperation.h"
-    #import "AFXMLRequestOperation.h"
-    #import "AFPropertyListRequestOperation.h"
-    #import "AFHTTPClient.h"
-
-    #import "AFImageRequestOperation.h"
-
-    #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
-        #import "AFNetworkActivityIndicatorManager.h"
-        #import "UIImageView+AFNetworking.h"
-    #endif
-#endif /* _AFNETWORKING_ */
+  int main(int argc, char *argv[]) {
+      return NSApplicationMain(argc, (const char **)argv);
+  }
+#endif

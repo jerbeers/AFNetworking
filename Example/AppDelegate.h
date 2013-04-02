@@ -1,6 +1,6 @@
-// AFNetworking.h
+// AppDelegate.h
 //
-// Copyright (c) 2011 Gowalla (http://gowalla.com/)
+// Copyright (c) 2012 Mattt Thompson (http://mattt.me/)
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +20,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import <Foundation/Foundation.h>
 #import <Availability.h>
 
-#ifndef _AFNETWORKING_
-    #define _AFNETWORKING_
+#if __IPHONE_OS_VERSION_MIN_REQUIRED
+    #import <UIKit/UIKit.h>
 
-    #import "AFURLConnectionOperation.h"
+    @interface AppDelegate : NSObject <UIApplicationDelegate>
 
-    #import "AFHTTPRequestOperation.h"
-    #import "AFJSONRequestOperation.h"
-    #import "AFXMLRequestOperation.h"
-    #import "AFPropertyListRequestOperation.h"
-    #import "AFHTTPClient.h"
+    @property (nonatomic, strong) UIWindow *window;
+    @property (nonatomic, strong) UINavigationController *navigationController;
 
-    #import "AFImageRequestOperation.h"
+    @end
+#else
+    #import <Cocoa/Cocoa.h>
 
-    #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
-        #import "AFNetworkActivityIndicatorManager.h"
-        #import "UIImageView+AFNetworking.h"
-    #endif
-#endif /* _AFNETWORKING_ */
+    @interface AppDelegate : NSObject <NSApplicationDelegate>
+
+    @property (strong) IBOutlet NSWindow *window;
+    @property (strong) IBOutlet NSTableView *tableView;
+    @property (strong) IBOutlet NSArrayController *postsArrayController;
+
+    @end
+#endif
