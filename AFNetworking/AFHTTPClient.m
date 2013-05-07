@@ -81,7 +81,7 @@ static NSString * AFBase64EncodedStringFromString(NSString *string) {
 }
 
 static NSString * AFPercentEscapedQueryStringPairMemberFromStringWithEncoding(NSString *string, NSStringEncoding encoding) {
-    static NSString * const kAFCharactersToBeEscaped = @":/?&=;+!@#$()~',*";
+    static NSString * const kAFCharactersToBeEscaped = @":/?&=;+!@#$()',*";
     static NSString * const kAFCharactersToLeaveUnescaped = @"[].";
 
 	return (__bridge_transfer  NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (__bridge CFStringRef)string, (__bridge CFStringRef)kAFCharactersToLeaveUnescaped, (__bridge CFStringRef)kAFCharactersToBeEscaped, CFStringConvertNSStringEncodingToEncoding(encoding));
@@ -149,22 +149,22 @@ NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value) {
         NSDictionary *dictionary = value;
         // Sort dictionary keys to ensure consistent ordering in query string, which is important when deserializing potentially ambiguous sequences, such as an array of dictionaries
         NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:@"description" ascending:YES selector:@selector(caseInsensitiveCompare:)];
-        [[[dictionary allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]] enumerateObjectsUsingBlock:^(id nestedKey, __unused NSUInteger idx, __unused BOOL *stop) {
-            id nestedValue = [dictionary objectForKey:nestedKey];
+        for (id nestedKey in [dictionary.allKeys sortedArrayUsingDescriptors:@[ sortDescriptor ]]) {
+            id nestedValue = dictionary[nestedKey];
             if (nestedValue) {
                 [mutableQueryStringComponents addObjectsFromArray:AFQueryStringPairsFromKeyAndValue((key ? [NSString stringWithFormat:@"%@[%@]", key, nestedKey] : nestedKey), nestedValue)];
             }
-        }];
+        }
     } else if ([value isKindOfClass:[NSArray class]]) {
         NSArray *array = value;
-        [array enumerateObjectsUsingBlock:^(id nestedValue, __unused NSUInteger idx, __unused BOOL *stop) {
+        for (id nestedValue in array) {
             [mutableQueryStringComponents addObjectsFromArray:AFQueryStringPairsFromKeyAndValue([NSString stringWithFormat:@"%@[]", key], nestedValue)];
-        }];
+        }
     } else if ([value isKindOfClass:[NSSet class]]) {
         NSSet *set = value;
-        [set enumerateObjectsUsingBlock:^(id obj, BOOL *stop) {
+        for (id obj in set) {
             [mutableQueryStringComponents addObjectsFromArray:AFQueryStringPairsFromKeyAndValue(key, obj)];
-        }];
+        }
     } else {
         [mutableQueryStringComponents addObject:[[AFQueryStringPair alloc] initWithField:key value:value]];
     }
@@ -263,6 +263,11 @@ NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value) {
     self.operationQueue = [[NSOperationQueue alloc] init];
 	[self.operationQueue setMaxConcurrentOperationCount:NSOperationQueueDefaultMaxConcurrentOperationCount];
 
+    // #ifdef included for backwards-compatibility
+#ifdef _AFNETWORKING_ALLOW_INVALID_SSL_CERTIFICATES_
+    self.allowsInvalidSSLCertificate = YES;
+#endif
+    
     return self;
 }
 
@@ -536,6 +541,7 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
 #ifdef _AFNETWORKING_PIN_SSL_CERTIFICATES_
     operation.SSLPinningMode = self.defaultSSLPinningMode;
 #endif
+    operation.allowsInvalidSSLCertificate = self.allowsInvalidSSLCertificate;
 
     return operation;
 }
@@ -605,12 +611,9 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
                     originalCompletionBlock();
                 }
 
-                __block NSUInteger numberOfFinishedOperations = 0;
-                [operations enumerateObjectsUsingBlock:^(id obj, __unused NSUInteger idx, __unused BOOL *stop) {
-                    if ([(NSOperation *)obj isFinished]) {
-                        numberOfFinishedOperations++;
-                    }
-                }];
+                NSInteger numberOfFinishedOperations = [[operations indexesOfObjectsPassingTest:^BOOL(id op, NSUInteger __unused idx,  BOOL __unused *stop) {
+                    return [op isFinished];
+                }] count];
 
                 if (progressBlock) {
                     progressBlock(numberOfFinishedOperations, [operations count]);
@@ -690,7 +693,7 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
     }
 
     self.stringEncoding = [aDecoder decodeIntegerForKey:@"stringEncoding"];
-    self.parameterEncoding = [aDecoder decodeIntegerForKey:@"parameterEncoding"];
+    self.parameterEncoding = (AFHTTPClientParameterEncoding) [aDecoder decodeIntegerForKey:@"parameterEncoding"];
     self.registeredHTTPOperationClassNames = [aDecoder decodeObjectForKey:@"registeredHTTPOperationClassNames"];
     self.defaultHeaders = [aDecoder decodeObjectForKey:@"defaultHeaders"];
 
@@ -764,7 +767,7 @@ NSTimeInterval const kAFUploadStream3GSuggestedDelay = 0.2;
 @property (nonatomic, strong) NSDictionary *headers;
 @property (nonatomic, strong) id body;
 @property (nonatomic, assign) unsigned long long bodyContentLength;
-@property (nonatomic, readonly) NSInputStream *inputStream;
+@property (nonatomic, strong) NSInputStream *inputStream;
 
 @property (nonatomic, assign) BOOL hasInitialBoundary;
 @property (nonatomic, assign) BOOL hasFinalBoundary;
@@ -779,7 +782,7 @@ NSTimeInterval const kAFUploadStream3GSuggestedDelay = 0.2;
 @interface AFMultipartBodyStreamProvider : NSObject
 @property (nonatomic, assign) NSUInteger bufferLength;
 @property (nonatomic, assign) NSTimeInterval delay;
-@property (nonatomic, readonly) NSInputStream *inputStream;
+@property (nonatomic, strong) NSInputStream *inputStream;
 @property (nonatomic, readonly) unsigned long long contentLength;
 @property (nonatomic, readonly, getter = isEmpty) BOOL empty;
 
@@ -971,7 +974,6 @@ NSTimeInterval const kAFUploadStream3GSuggestedDelay = 0.2;
 @property (nonatomic, strong) NSMutableArray *HTTPBodyParts;
 @property (nonatomic, strong) NSEnumerator *HTTPBodyPartEnumerator;
 @property (nonatomic, strong) AFHTTPBodyPart *currentHTTPBodyPart;
-@property (nonatomic, strong) NSInputStream *inputStream;
 @property (nonatomic, strong) NSOutputStream *outputStream;
 @property (nonatomic, strong) NSMutableData *buffer;
 @end
@@ -1070,7 +1072,7 @@ static const NSUInteger AFMultipartBodyStreamProviderDefaultBufferLength = 4096;
 - (void)handleOutputStreamSpaceAvailable {
     while ([_outputStream hasSpaceAvailable]) {
         if ([_buffer length] > 0) {
-            NSInteger numberOfBytesWritten = [_outputStream write:[_buffer bytes] maxLength:[_buffer length]];
+            NSInteger numberOfBytesWritten = [_outputStream write:(uint8_t const *)[_buffer bytes] maxLength:[_buffer length]];
             if (numberOfBytesWritten < 0) {
                 [self close];
                 return;
@@ -1092,7 +1094,7 @@ static const NSUInteger AFMultipartBodyStreamProviderDefaultBufferLength = 4096;
             
             [_buffer setLength:self.bufferLength];
             
-            NSInteger numberOfBytesRead = [self.currentHTTPBodyPart read:[_buffer mutableBytes] maxLength:[_buffer length]];
+            NSInteger numberOfBytesRead = [self.currentHTTPBodyPart read:(uint8_t *)[_buffer mutableBytes] maxLength:[_buffer length]];
             if (numberOfBytesRead < 0) {
                 [self close];
                 return;
@@ -1100,7 +1102,7 @@ static const NSUInteger AFMultipartBodyStreamProviderDefaultBufferLength = 4096;
             
             [_buffer setLength:numberOfBytesRead];
 
-            if(numberOfBytesRead == 0) {
+            if (numberOfBytesRead == 0) {
                 self.currentHTTPBodyPart = nil;
             }
 
@@ -1112,8 +1114,21 @@ static const NSUInteger AFMultipartBodyStreamProviderDefaultBufferLength = 4096;
 }
 
 - (void)close {
-    [_outputStream close];
-    _outputStream.delegate = nil;
+    NSOutputStream *outputStream = self.outputStream;
+    
+    [outputStream close];
+    outputStream.delegate = nil;
+    
+    /*
+     Workaround for a race condition in CFStream _CFStreamCopyRunLoopsAndModes. This outputstream needs to be retained just a little longer.
+     
+     See: https://github.com/AFNetworking/AFNetworking/issues/907
+     */
+    double delayInSeconds = 2.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^{
+        outputStream.delegate = nil;
+    });
     
     _self = nil;
 }
